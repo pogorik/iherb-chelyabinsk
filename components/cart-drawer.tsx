@@ -157,8 +157,8 @@ export function CartDrawer() {
                 <ul className="space-y-4">
                   {lines.map((line) => (
                     <li key={line.product.id} className="flex gap-3">
-                      <div className="h-20 w-20 shrink-0 rounded-xl bg-sand-100">
-                        <ProductImage product={line.product} className="h-full w-full p-3" />
+                      <div className="h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-sand-100">
+                        <ProductImage product={line.product} className="h-full w-full" glyphClassName="p-3" />
                       </div>
                       <div className="flex flex-1 flex-col">
                         <p className="line-clamp-2 text-sm font-medium text-brand-900">

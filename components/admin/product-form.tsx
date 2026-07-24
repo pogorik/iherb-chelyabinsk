@@ -154,7 +154,7 @@ export function ProductForm({ product }: { product?: Product }) {
         <p className="mb-2 text-sm text-zinc-600">Фото товара</p>
         <div className="flex items-center gap-4">
           <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-sand-100">
-            <ProductImage product={previewProduct} className="h-full w-full p-3" />
+            <ProductImage product={previewProduct} className="h-full w-full" glyphClassName="p-3" />
           </div>
           <div>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium text-brand-900 transition hover:bg-brand-50">

@@ -48,8 +48,8 @@ export function QuickViewModal() {
         </div>
 
         <div className="grid gap-6 p-5 sm:grid-cols-2 sm:p-6">
-          <div className="aspect-square rounded-2xl bg-sand-100">
-            <ProductImage product={product} className="h-full w-full p-10" />
+          <div className="aspect-square overflow-hidden rounded-2xl bg-sand-100">
+            <ProductImage product={product} className="h-full w-full" glyphClassName="p-10" />
           </div>
 
           <div className="flex flex-col">

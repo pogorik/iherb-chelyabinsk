@@ -54,7 +54,8 @@ export function ProductCard({ product }: { product: Product }) {
         >
           <ProductImage
             product={product}
-            className="h-full w-full p-7 transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-full transition-transform duration-300 group-hover:scale-105"
+            glyphClassName="p-7"
           />
         </button>
       </div>
