@@ -24,6 +24,8 @@ export interface Product {
   isHit?: boolean;
   accent: "brand" | "accent" | "leaf" | "amber" | "berry";
   imageUrl?: string;
+  // Все фото товара, imageUrl — это imageUrls[0] для удобства (см. mapProductRow).
+  imageUrls?: string[];
 }
 
 export interface FilterOption {

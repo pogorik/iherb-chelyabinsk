@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CartIcon, CloseIcon } from "./icons";
 import { ProductImage } from "./product-image";
 import { QuantityStepper } from "./quantity-stepper";
@@ -16,8 +16,18 @@ export function QuickViewModal() {
   const { addItem } = useCart();
   const { purposes } = useCatalogData();
   const [qty, setQty] = useState(1);
+  const [activeImage, setActiveImage] = useState(0);
+
+  // Каждый раз, когда через быстрый просмотр открывают другой товар,
+  // галерея должна вернуться к первому фото, а не остаться на прошлом индексе.
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- сброс состояния при смене товара, не побочный эффект рендера
+    setActiveImage(0);
+  }, [product?.id]);
 
   if (!product) return null;
+
+  const photos = product.imageUrls ?? [];
 
   const purposeLabels = product.purposes
     .map((slug) => purposes.find((p) => p.slug === slug)?.label)
@@ -48,8 +58,37 @@ export function QuickViewModal() {
         </div>
 
         <div className="grid gap-6 p-5 sm:grid-cols-2 sm:p-6">
-          <div className="aspect-square overflow-hidden rounded-2xl bg-sand-100">
-            <ProductImage product={product} className="h-full w-full" glyphClassName="p-10" />
+          <div>
+            <div className="aspect-square overflow-hidden rounded-2xl bg-sand-100">
+              {photos.length > 0 ? (
+                // eslint-disable-next-line @next/next/no-img-element -- static export + Supabase Storage host
+                <img
+                  src={photos[activeImage] ?? photos[0]}
+                  alt={product.name}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <ProductImage product={product} className="h-full w-full" glyphClassName="p-10" />
+              )}
+            </div>
+            {photos.length > 1 && (
+              <div className="mt-2 flex gap-2">
+                {photos.map((photo, index) => (
+                  <button
+                    key={photo}
+                    type="button"
+                    onClick={() => setActiveImage(index)}
+                    className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl border bg-sand-100 transition ${
+                      index === activeImage ? "border-accent-500" : "border-line hover:border-brand-300"
+                    }`}
+                    aria-label={`Фото ${index + 1}`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element -- static export + Supabase Storage host */}
+                    <img src={photo} alt="" className="h-full w-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col">

@@ -6,7 +6,6 @@ import { supabase } from "@/lib/supabase";
 import { useCatalogData } from "@/lib/catalog-data-context";
 import { ACTIVE_COMPONENTS, FORM_LABELS } from "@/lib/products";
 import { Button } from "@/components/button";
-import { ProductImage } from "@/components/product-image";
 import { CloseIcon } from "@/components/icons";
 import type { Product } from "@/lib/types";
 
@@ -39,7 +38,7 @@ export function ProductForm({ product }: { product?: Product }) {
   const [accent, setAccent] = useState<Product["accent"]>(product?.accent ?? "brand");
   const [purposes, setPurposes] = useState<string[]>(product?.purposes ?? []);
   const [activeComponents, setActiveComponents] = useState<string[]>(product?.activeComponents ?? []);
-  const [imageUrl, setImageUrl] = useState<string | undefined>(product?.imageUrl);
+  const [imageUrls, setImageUrls] = useState<string[]>(product?.imageUrls ?? []);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageError, setImageError] = useState<string | null>(null);
 
@@ -82,7 +81,15 @@ export function ProductForm({ product }: { product?: Product }) {
     }
 
     const { data } = supabase.storage.from("product-images").getPublicUrl(path);
-    setImageUrl(data.publicUrl);
+    setImageUrls((prev) => [...prev, data.publicUrl]);
+  }
+
+  function removeImage(url: string) {
+    setImageUrls((prev) => prev.filter((item) => item !== url));
+  }
+
+  function moveImageFirst(url: string) {
+    setImageUrls((prev) => [url, ...prev.filter((item) => item !== url)]);
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -108,7 +115,8 @@ export function ProductForm({ product }: { product?: Product }) {
       in_stock: Number(stockQuantity) > 0,
       is_hit: isHit,
       accent,
-      image_url: imageUrl ?? null,
+      image_url: imageUrls[0] ?? null,
+      image_urls: imageUrls,
       updated_at: new Date().toISOString(),
     };
 
@@ -127,59 +135,53 @@ export function ProductForm({ product }: { product?: Product }) {
     router.push("/admin/products");
   }
 
-  const previewProduct: Product = {
-    id: product?.id ?? "preview",
-    slug: slug || "preview",
-    name: name || "Товар",
-    brand,
-    price: Number(price) || 0,
-    ageGroup,
-    purposes,
-    activeComponents,
-    form,
-    volume,
-    description,
-    rating: Number(rating) || 0,
-    reviewsCount: Number(reviewsCount) || 0,
-    inStock: Number(stockQuantity) > 0,
-    stockQuantity: Number(stockQuantity) || 0,
-    isHit,
-    accent,
-    imageUrl,
-  };
-
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl">
       <div className="mb-4">
         <p className="mb-2 text-sm text-zinc-600">Фото товара</p>
-        <div className="flex items-center gap-4">
-          <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-sand-100">
-            <ProductImage product={previewProduct} className="h-full w-full" glyphClassName="p-3" />
-          </div>
-          <div>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-full border border-line px-4 py-2 text-sm font-medium text-brand-900 transition hover:bg-brand-50">
-              {uploadingImage ? "Загружаем…" : imageUrl ? "Заменить фото" : "Загрузить фото"}
-              <input
-                type="file"
-                accept="image/*"
-                disabled={uploadingImage}
-                onChange={handleImageChange}
-                className="hidden"
-              />
-            </label>
-            {imageUrl && (
+        <div className="flex flex-wrap gap-3">
+          {imageUrls.map((url, index) => (
+            <div key={url} className="group relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-sand-100">
+              {/* eslint-disable-next-line @next/next/no-img-element -- static export + Supabase Storage host */}
+              <img src={url} alt="" className="h-full w-full object-cover" />
+              {index === 0 ? (
+                <span className="absolute bottom-1 left-1 rounded-full bg-brand-900/80 px-2 py-0.5 text-[10px] font-medium text-white">
+                  Главное
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => moveImageFirst(url)}
+                  className="absolute inset-x-1 bottom-1 rounded-full bg-black/60 py-0.5 text-[10px] font-medium text-white opacity-0 transition group-hover:opacity-100"
+                >
+                  Сделать главным
+                </button>
+              )}
               <button
                 type="button"
-                onClick={() => setImageUrl(undefined)}
-                className="ml-2 inline-flex items-center gap-1 rounded-full border border-line px-3 py-2 text-sm font-medium text-accent-600 transition hover:bg-accent-50"
+                onClick={() => removeImage(url)}
+                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-white/90 text-brand-700 shadow-sm transition hover:text-accent-600"
+                aria-label="Удалить фото"
               >
-                <CloseIcon className="h-3.5 w-3.5" />
-                Убрать
+                <CloseIcon className="h-3 w-3" />
               </button>
-            )}
-            <p className="mt-1.5 text-xs text-zinc-400">JPG, PNG или WEBP, до 5 МБ</p>
-          </div>
+            </div>
+          ))}
+
+          <label className="flex h-24 w-24 shrink-0 cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-line text-center text-xs font-medium text-brand-700 transition hover:bg-brand-50">
+            {uploadingImage ? "Загружаем…" : "+ Добавить фото"}
+            <input
+              type="file"
+              accept="image/*"
+              disabled={uploadingImage}
+              onChange={handleImageChange}
+              className="hidden"
+            />
+          </label>
         </div>
+        <p className="mt-2 text-xs text-zinc-400">
+          JPG, PNG или WEBP, до 5 МБ. Первое фото показывается в каталоге и на карточке товара.
+        </p>
         {imageError && <p className="mt-2 text-sm text-accent-600">{imageError}</p>}
       </div>
 

@@ -32,6 +32,7 @@ interface ProductRow {
   is_hit: boolean;
   accent: Product["accent"];
   image_url: string | null;
+  image_urls: string[] | null;
 }
 
 function mapProductRow(row: ProductRow): Product {
@@ -39,6 +40,7 @@ function mapProductRow(row: ProductRow): Product {
   // товаров. Пока админ не проставил число, доверяем старому булеву in_stock
   // (999 «в достатке» / 0 «нет»), чтобы каталог не «обнулился» после миграции.
   const stockQuantity = row.stock_quantity ?? (row.in_stock ? 999 : 0);
+  const imageUrls = row.image_urls && row.image_urls.length > 0 ? row.image_urls : row.image_url ? [row.image_url] : [];
 
   return {
     id: row.id,
@@ -59,7 +61,8 @@ function mapProductRow(row: ProductRow): Product {
     stockQuantity,
     isHit: row.is_hit,
     accent: row.accent,
-    imageUrl: row.image_url ?? undefined,
+    imageUrl: imageUrls[0] ?? undefined,
+    imageUrls,
   };
 }
 
