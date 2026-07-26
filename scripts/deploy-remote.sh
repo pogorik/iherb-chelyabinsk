@@ -8,13 +8,10 @@ cd "$(dirname "$0")/.."
 
 npm ci
 
-echo "--- DEBUG ---"
-pwd
-echo "PATH=$PATH"
-ls -la node_modules/.bin/next || echo "next bin MISSING"
-node_modules/.bin/next --version || echo "next --version FAILED"
-echo "--- END DEBUG ---"
-
-npm run build
+# npm run build (→ "next build" через npm's PATH-обёртку) в этом окружении
+# необъяснимо не находит next, хотя node_modules/.bin/next существует и
+# прекрасно запускается напрямую — поэтому вызываем бинарник напрямую,
+# в обход npm run.
+./node_modules/.bin/next build
 pm2 reload iherb-chelyabinsk --update-env || pm2 start npm --name iherb-chelyabinsk -- start
 pm2 save
