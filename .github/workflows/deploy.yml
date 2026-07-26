@@ -26,6 +26,11 @@ jobs:
           install -m 600 -D /dev/null ~/.ssh/deploy_key
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
 
+      - name: Ensure remote app directory exists
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'mkdir -p "${{ secrets.VPS_APP_DIR }}"'
+
       # .env.local живёт только на сервере и никогда не перезаписывается
       # деплоем — исключаем его явно, наравне с node_modules/.next/.git.
       - name: Sync source to VPS
