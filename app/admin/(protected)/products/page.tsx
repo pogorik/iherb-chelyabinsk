@@ -7,12 +7,17 @@ import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/button";
 import { formatPrice } from "@/lib/utils";
 
+type StockFilter = "all" | "in-stock" | "out-of-stock";
+
 export default function AdminProductsPage() {
   const { products, loading, refetch } = useCatalogData();
   const [search, setSearch] = useState("");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const filtered = products.filter((product) => {
+    if (stockFilter === "in-stock" && !product.inStock) return false;
+    if (stockFilter === "out-of-stock" && product.inStock) return false;
     if (!search.trim()) return true;
     const q = search.trim().toLowerCase();
     return product.name.toLowerCase().includes(q) || product.brand.toLowerCase().includes(q);
@@ -41,12 +46,23 @@ export default function AdminProductsPage() {
         </Button>
       </div>
 
-      <input
-        value={search}
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder="Поиск по названию или бренду"
-        className="mt-4 w-full max-w-sm rounded-full border border-line px-4 py-2.5 text-sm outline-none focus:border-brand-400"
-      />
+      <div className="mt-4 flex flex-wrap gap-3">
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Поиск по названию или бренду"
+          className="w-full max-w-sm rounded-full border border-line px-4 py-2.5 text-sm outline-none focus:border-brand-400"
+        />
+        <select
+          value={stockFilter}
+          onChange={(event) => setStockFilter(event.target.value as StockFilter)}
+          className="rounded-full border border-line px-4 py-2.5 text-sm text-brand-900 outline-none focus:border-brand-400"
+        >
+          <option value="all">Все товары</option>
+          <option value="in-stock">В наличии</option>
+          <option value="out-of-stock">Нет в наличии</option>
+        </select>
+      </div>
 
       <div className="mt-6 overflow-x-auto rounded-[20px] border border-line bg-white">
         <table className="w-full min-w-[640px] text-left text-sm">

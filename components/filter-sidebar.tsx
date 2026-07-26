@@ -1,6 +1,5 @@
 "use client";
 
-import { CheckIcon } from "./icons";
 import { FilterCheckboxGroup } from "./filter-checkbox-group";
 import { PriceRangeSlider } from "./price-range-slider";
 import { Button } from "./button";
@@ -24,8 +23,6 @@ export interface FilterSidebarProps {
   priceMax: number;
   priceRange: [number, number];
   setPriceRange: (value: [number, number]) => void;
-  inStockOnly: boolean;
-  setInStockOnly: (value: boolean) => void;
   onReset: () => void;
 }
 
@@ -53,8 +50,6 @@ export function FilterSidebar({
   priceMax,
   priceRange,
   setPriceRange,
-  inStockOnly,
-  setInStockOnly,
   onReset,
 }: FilterSidebarProps) {
   return (
@@ -98,21 +93,6 @@ export function FilterSidebar({
         <div className="mt-4">
           <PriceRangeSlider min={priceMin} max={priceMax} step={10} value={priceRange} onChange={setPriceRange} />
         </div>
-      </div>
-
-      <div className="py-4">
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm text-zinc-600">
-          <input
-            type="checkbox"
-            className="peer sr-only"
-            checked={inStockOnly}
-            onChange={(event) => setInStockOnly(event.target.checked)}
-          />
-          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-zinc-300 text-transparent peer-checked:border-brand-600 peer-checked:bg-brand-600 peer-checked:text-white">
-            <CheckIcon className="h-3 w-3" />
-          </span>
-          Только товары в наличии
-        </label>
       </div>
 
       <Button variant="ghost" onClick={onReset} className="mt-2 !px-0">

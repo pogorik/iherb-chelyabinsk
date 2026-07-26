@@ -13,7 +13,7 @@ export function FeaturedProducts() {
   const { products: allProducts, loading } = useCatalogData();
   const { settings } = useSiteSettings();
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
-  const allHits = allProducts.filter((product) => product.isHit);
+  const allHits = allProducts.filter((product) => product.isHit && product.inStock);
   const products = allHits.slice(0, visibleCount);
 
   if (!loading && products.length === 0) return null;
