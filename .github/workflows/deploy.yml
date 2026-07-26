@@ -45,11 +45,5 @@ jobs:
 
       - name: Install, build and reload on VPS
         run: |
-          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
-            set -e
-            cd "${{ secrets.VPS_APP_DIR }}"
-            npm ci
-            npm run build
-            pm2 reload iherb-chelyabinsk --update-env || pm2 start npm --name iherb-chelyabinsk -- start
-            pm2 save
-          '
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "bash '${{ secrets.VPS_APP_DIR }}/scripts/deploy-remote.sh'"
