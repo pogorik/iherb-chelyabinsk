@@ -2,6 +2,7 @@
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { useCatalogData } from "@/lib/catalog-data-context";
 import { ACTIVE_COMPONENTS, FORM_LABELS } from "@/lib/products";
 import { Button } from "@/components/button";
@@ -61,20 +62,26 @@ export function ProductForm({ product }: { product?: Product }) {
     setImageError(null);
     setUploadingImage(true);
 
-    const formData = new FormData();
-    formData.append("file", file);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${crypto.randomUUID()}.${ext}`;
 
-    const response = await fetch("/api/upload", { method: "POST", body: formData });
+    const { error: uploadError } = await supabase.storage
+      .from("product-images")
+      .upload(path, file, { upsert: true, contentType: file.type });
+
     setUploadingImage(false);
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      setImageError(data.error ?? "Не удалось загрузить фото");
+    if (uploadError) {
+      setImageError(
+        uploadError.message.includes("Bucket not found")
+          ? "Хранилище для фото ещё не создано в Supabase (bucket «product-images»)."
+          : uploadError.message
+      );
       return;
     }
 
-    const data = await response.json();
-    setImageUrls((prev) => [...prev, data.url]);
+    const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+    setImageUrls((prev) => [...prev, data.publicUrl]);
   }
 
   function removeImage(url: string) {
@@ -110,25 +117,17 @@ export function ProductForm({ product }: { product?: Product }) {
       accent,
       image_url: imageUrls[0] ?? null,
       image_urls: imageUrls,
+      updated_at: new Date().toISOString(),
     };
 
-    const response = isEdit
-      ? await fetch(`/api/products/${product!.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(row),
-        })
-      : await fetch("/api/products", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(row),
-        });
+    const { error: dbError } = isEdit
+      ? await supabase.from("products").update(row).eq("id", product!.id)
+      : await supabase.from("products").insert({ ...row, id: crypto.randomUUID() });
 
     setSubmitting(false);
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      setError(data.error ?? "Не удалось сохранить товар");
+    if (dbError) {
+      setError(dbError.message);
       return;
     }
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCatalogData } from "@/lib/catalog-data-context";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/button";
 import { formatPrice } from "@/lib/utils";
 
@@ -20,11 +21,10 @@ export default function AdminProductsPage() {
   async function handleDelete(id: string, name: string) {
     if (!window.confirm(`Удалить товар «${name}»? Это действие нельзя отменить.`)) return;
     setDeletingId(id);
-    const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
+    const { error } = await supabase.from("products").delete().eq("id", id);
     setDeletingId(null);
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      window.alert("Не удалось удалить товар: " + (data.error ?? response.statusText));
+    if (error) {
+      window.alert("Не удалось удалить товар: " + error.message);
       return;
     }
     refetch();

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/utils";
 
 interface OrderItem {
@@ -33,8 +34,12 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     async function load() {
       try {
-        const response = await fetch("/api/orders");
-        const orders = response.ok ? ((await response.json()) as OrderRow[]) : [];
+        const { data } = await supabase
+          .from("orders")
+          .select("id, created_at, items, total_price, status")
+          .order("created_at", { ascending: false });
+
+        const orders = (data as OrderRow[] | null) ?? [];
         const active = orders.filter((order) => order.status !== "cancelled");
 
         const qtyByProduct = new Map<string, { name: string; qty: number }>();

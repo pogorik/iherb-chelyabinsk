@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { isSupabaseConfigured, supabase } from "./supabase";
 import type { FilterOption, Product } from "./types";
 
 interface ProductRow {
@@ -35,6 +36,9 @@ interface ProductRow {
 }
 
 function mapProductRow(row: ProductRow): Product {
+  // stock_quantity — новая колонка, может быть ещё не заполнена для старых
+  // товаров. Пока админ не проставил число, доверяем старому булеву in_stock
+  // (999 «в достатке» / 0 «нет»), чтобы каталог не «обнулился» после миграции.
   const stockQuantity = row.stock_quantity ?? (row.in_stock ? 999 : 0);
   const imageUrls = row.image_urls && row.image_urls.length > 0 ? row.image_urls : row.image_url ? [row.image_url] : [];
 
@@ -87,30 +91,34 @@ export function CatalogDataProvider({ children }: { children: ReactNode }) {
     async function load() {
       setLoading(true);
 
+      if (!isSupabaseConfigured) {
+        // Supabase ещё не подключён (нет .env.local с реальными ключами) —
+        // не делаем заведомо бессмысленный запрос, сразу показываем пустой каталог.
+        if (!cancelled) {
+          setProducts([]);
+          setPurposes([]);
+          setBrands([]);
+          setLoading(false);
+        }
+        return;
+      }
+
       try {
         const [productsRes, purposesRes, brandsRes] = await Promise.all([
-          fetch("/api/products"),
-          fetch("/api/taxonomy/purposes"),
-          fetch("/api/taxonomy/brands"),
+          supabase.from("products").select("*").order("name"),
+          supabase.from("purposes").select("slug, label").order("label"),
+          supabase.from("brands").select("slug, label").order("label"),
         ]);
 
         if (cancelled) return;
 
-        const [productRows, purposeRows, brandRows] = await Promise.all([
-          productsRes.ok ? (productsRes.json() as Promise<ProductRow[]>) : Promise.resolve([]),
-          purposesRes.ok ? (purposesRes.json() as Promise<FilterOption[]>) : Promise.resolve([]),
-          brandsRes.ok ? (brandsRes.json() as Promise<FilterOption[]>) : Promise.resolve([]),
-        ]);
-
-        if (cancelled) return;
-
-        setProducts(productRows.map(mapProductRow));
-        setPurposes(purposeRows);
-        setBrands(brandRows);
+        setProducts(((productsRes.data as ProductRow[] | null) ?? []).map(mapProductRow));
+        setPurposes((purposesRes.data as FilterOption[] | null) ?? []);
+        setBrands((brandsRes.data as FilterOption[] | null) ?? []);
       } catch (error) {
-        // Backend недоступен (нет сети и т.п.) — не зависаем на загрузке вечно,
-        // просто показываем пустой каталог.
-        console.error("Не удалось загрузить каталог", error);
+        // Supabase недоступен (не настроен .env.local, нет сети и т.п.) —
+        // не зависаем на загрузке вечно, просто показываем пустой каталог.
+        console.error("Не удалось загрузить каталог из Supabase", error);
         if (cancelled) return;
         setProducts([]);
         setPurposes([]);

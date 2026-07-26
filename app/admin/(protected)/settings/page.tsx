@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useSiteSettings } from "@/lib/site-settings-context";
+import { supabase } from "@/lib/supabase";
 import { Button } from "@/components/button";
 
 export default function AdminSettingsPage() {
@@ -27,10 +28,9 @@ export default function AdminSettingsPage() {
     setSubmitting(true);
     setError(null);
 
-    const response = await fetch("/api/site-settings", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const { error: dbError } = await supabase
+      .from("site_settings")
+      .update({
         name: form.name,
         tagline: form.tagline,
         hero_title: form.heroTitle,
@@ -45,14 +45,13 @@ export default function AdminSettingsPage() {
         working_hours: form.workingHours,
         vk_url: form.vkUrl,
         pickup_info: form.pickupInfo,
-      }),
-    });
+      })
+      .eq("id", 1);
 
     setSubmitting(false);
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      setError(data.error ?? "Не удалось сохранить настройки");
+    if (dbError) {
+      setError(dbError.message);
       return;
     }
 

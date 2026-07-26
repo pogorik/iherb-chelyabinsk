@@ -19,9 +19,7 @@ function toggleValue(list: string[], value: string): string[] {
 
 export function CatalogView() {
   const searchParams = useSearchParams();
-  const { products: allProducts, purposes: purposeOptions, brands: brandOptions, loading } = useCatalogData();
-  // Товары не в наличии видны только в админке, покупателю на витрине не показываем вовсе.
-  const products = useMemo(() => allProducts.filter((product) => product.inStock), [allProducts]);
+  const { products, purposes: purposeOptions, brands: brandOptions, loading } = useCatalogData();
 
   const [ageGroup, setAgeGroup] = useState<AgeGroup | "all">("all");
   const [saleOnly, setSaleOnly] = useState(false);
@@ -29,6 +27,7 @@ export function CatalogView() {
   const [components, setComponents] = useState<string[]>([]);
   const [brands, setBrands] = useState<string[]>([]);
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 0]);
+  const [inStockOnly, setInStockOnly] = useState(false);
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<SortKey>("default");
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
@@ -70,6 +69,7 @@ export function CatalogView() {
         return false;
       if (brands.length > 0 && !brands.includes(product.brand)) return false;
       if (product.price < priceRange[0] || product.price > priceRange[1]) return false;
+      if (inStockOnly && !product.inStock) return false;
       if (search.trim()) {
         const q = search.trim().toLowerCase();
         if (!product.name.toLowerCase().includes(q) && !product.brand.toLowerCase().includes(q)) {
@@ -78,7 +78,7 @@ export function CatalogView() {
       }
       return true;
     });
-  }, [products, ageGroup, saleOnly, purposes, components, brands, priceRange, search]);
+  }, [products, ageGroup, saleOnly, purposes, components, brands, priceRange, inStockOnly, search]);
 
   const sorted = useMemo(() => {
     const list = [...filtered];
@@ -107,7 +107,7 @@ export function CatalogView() {
     // during render — it genuinely needs to be synced from two sources.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setVisibleCount(PAGE_SIZE);
-  }, [ageGroup, saleOnly, purposes, components, brands, priceRange, search, sort]);
+  }, [ageGroup, saleOnly, purposes, components, brands, priceRange, inStockOnly, search, sort]);
 
   const visible = sorted.slice(0, visibleCount);
 
@@ -118,11 +118,12 @@ export function CatalogView() {
     setComponents([]);
     setBrands([]);
     setPriceRange([priceBounds.min, priceBounds.max]);
+    setInStockOnly(false);
     setSearch("");
   }
 
   const activeFilterCount =
-    purposes.length + components.length + brands.length + (saleOnly ? 1 : 0);
+    purposes.length + components.length + brands.length + (inStockOnly ? 1 : 0) + (saleOnly ? 1 : 0);
 
   const filterProps = {
     ageGroup,
@@ -141,6 +142,8 @@ export function CatalogView() {
     priceMax: priceBounds.max,
     priceRange,
     setPriceRange,
+    inStockOnly,
+    setInStockOnly,
     onReset: resetFilters,
   };
 

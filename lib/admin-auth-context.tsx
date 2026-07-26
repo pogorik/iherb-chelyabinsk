@@ -1,13 +1,11 @@
 "use client";
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-
-interface AdminSession {
-  email: string;
-}
+import type { Session } from "@supabase/supabase-js";
+import { isSupabaseConfigured, supabase } from "./supabase";
 
 interface AdminAuthValue {
-  session: AdminSession | null;
+  session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
@@ -16,20 +14,33 @@ interface AdminAuthValue {
 const AdminAuthContext = createContext<AdminAuthValue | null>(null);
 
 export function AdminAuthProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<AdminSession | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/auth/session")
-      .then((res) => res.json())
-      .then((data: { email: string | null }) => {
-        setSession(data.email ? { email: data.email } : null);
+    if (!isSupabaseConfigured) {
+      // Supabase не подключён — не пытаемся получить сессию, сразу снимаем загрузку.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoading(false);
+      return;
+    }
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        setSession(data.session);
       })
       .catch((error) => {
         console.error("Не удалось получить сессию", error);
         setSession(null);
       })
       .finally(() => setLoading(false));
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+
+    return () => subscription.subscription.unsubscribe();
   }, []);
 
   const value = useMemo<AdminAuthValue>(
@@ -37,22 +48,11 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
       session,
       loading,
       async signIn(email, password) {
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        if (!response.ok) {
-          const data = await response.json().catch(() => ({}));
-          return { error: data.error ?? "Не удалось войти" };
-        }
-        const data = await response.json();
-        setSession({ email: data.email });
-        return { error: null };
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        return { error: error?.message ?? null };
       },
       async signOut() {
-        await fetch("/api/auth/logout", { method: "POST" });
-        setSession(null);
+        await supabase.auth.signOut();
       },
     }),
     [session, loading]

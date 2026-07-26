@@ -13,7 +13,7 @@ export function ProductImage({
   glyphClassName?: string;
 }) {
   if (product.imageUrl) {
-    // eslint-disable-next-line @next/next/no-img-element -- remote S3 host, no next/image domain config needed
+    // eslint-disable-next-line @next/next/no-img-element -- static export + Supabase Storage host, no next/image config needed
     return <img src={product.imageUrl} alt={product.name} className={`object-cover ${className ?? ""}`} />;
   }
   return <ProductGlyph product={product} className={`${className ?? ""} ${glyphClassName ?? ""}`} />;

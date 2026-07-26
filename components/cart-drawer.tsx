@@ -7,6 +7,7 @@ import { ProductImage } from "./product-image";
 import { Button } from "./button";
 import { useCart } from "@/lib/cart-context";
 import { useSiteSettings } from "@/lib/site-settings-context";
+import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/utils";
 import { buildOrderMessage, buildWhatsAppLink } from "@/lib/order";
 import { FULFILLMENT_OPTIONS } from "@/lib/fulfillment";
@@ -41,14 +42,17 @@ export function CartDrawer() {
     // Финальная проверка остатков перед отправкой — то, что лежит в корзине,
     // могло устареть (товар добавили давно или его раскупили в другой вкладке).
     try {
-      const stockResponse = await fetch("/api/products");
-      const stockRows = stockResponse.ok
-        ? ((await stockResponse.json()) as Array<{ id: string; stock_quantity: number | null }>)
-        : [];
+      const { data: stockRows } = await supabase
+        .from("products")
+        .select("id, name, stock_quantity")
+        .in(
+          "id",
+          lines.map((line) => line.product.id)
+        );
 
       const shortages = lines
         .map((line) => {
-          const fresh = stockRows.find((row) => row.id === line.product.id);
+          const fresh = stockRows?.find((row) => row.id === line.product.id);
           const available = fresh ? fresh.stock_quantity : line.product.stockQuantity;
           if (typeof available === "number" && line.qty > available) {
             return { name: line.product.name, available };
@@ -80,23 +84,19 @@ export function CartDrawer() {
     setOrderText(buildOrderMessage(lines, totalPrice, customer, settings.name));
 
     try {
-      await fetch("/api/orders", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer_name: name,
-          customer_phone: phone,
-          fulfillment,
-          customer_comment: comment || null,
-          items: lines.map((line) => ({
-            product_id: line.product.id,
-            name: line.product.name,
-            qty: line.qty,
-            price: line.product.price,
-            line_total: line.lineTotal,
-          })),
-          total_price: totalPrice,
-        }),
+      await supabase.from("orders").insert({
+        customer_name: name,
+        customer_phone: phone,
+        fulfillment,
+        customer_comment: comment || null,
+        items: lines.map((line) => ({
+          product_id: line.product.id,
+          name: line.product.name,
+          qty: line.qty,
+          price: line.product.price,
+          line_total: line.lineTotal,
+        })),
+        total_price: totalPrice,
       });
     } catch (error) {
       // Best-effort: если запись в базу не удалась (нет сети и т.п.),
