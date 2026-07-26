@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
 import type { FilterOption } from "@/lib/types";
 
 interface TaxonomyEditorProps {
@@ -22,12 +21,15 @@ export function TaxonomyEditor({ title, table, items, onChange }: TaxonomyEditor
     if (!newSlug.trim() || !newLabel.trim()) return;
     setError(null);
     setBusySlug("__new__");
-    const { error: dbError } = await supabase
-      .from(table)
-      .insert({ slug: newSlug.trim(), label: newLabel.trim() });
+    const response = await fetch(`/api/taxonomy/${table}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug: newSlug.trim(), label: newLabel.trim() }),
+    });
     setBusySlug(null);
-    if (dbError) {
-      setError(dbError.message);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error ?? "Не удалось добавить");
       return;
     }
     setNewSlug("");
@@ -40,10 +42,15 @@ export function TaxonomyEditor({ title, table, items, onChange }: TaxonomyEditor
     if (!label || !label.trim()) return;
     setError(null);
     setBusySlug(slug);
-    const { error: dbError } = await supabase.from(table).update({ label: label.trim() }).eq("slug", slug);
+    const response = await fetch(`/api/taxonomy/${table}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ slug, label: label.trim() }),
+    });
     setBusySlug(null);
-    if (dbError) {
-      setError(dbError.message);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error ?? "Не удалось сохранить");
       return;
     }
     setDrafts((prev) => {
@@ -58,10 +65,13 @@ export function TaxonomyEditor({ title, table, items, onChange }: TaxonomyEditor
     if (!window.confirm(`Удалить «${label}»? Товары с этим значением его потеряют.`)) return;
     setError(null);
     setBusySlug(slug);
-    const { error: dbError } = await supabase.from(table).delete().eq("slug", slug);
+    const response = await fetch(`/api/taxonomy/${table}?slug=${encodeURIComponent(slug)}`, {
+      method: "DELETE",
+    });
     setBusySlug(null);
-    if (dbError) {
-      setError(dbError.message);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      setError(data.error ?? "Не удалось удалить");
       return;
     }
     onChange();

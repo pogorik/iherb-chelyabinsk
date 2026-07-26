@@ -1,6 +1,5 @@
 import Link from "next/link";
 import Image from "next/image";
-import { assetPath } from "@/lib/asset-path";
 
 const CATEGORIES: Array<{
   slug: string;
@@ -47,7 +46,7 @@ export function CategoryShowcase() {
           >
             <div className="relative aspect-[4/3] w-full overflow-hidden bg-sand-100">
               <Image
-                src={assetPath(photo)}
+                src={photo}
                 alt={label}
                 fill
                 className="object-cover transition duration-300 group-hover:scale-105"

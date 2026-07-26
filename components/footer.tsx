@@ -1,9 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { MapPinIcon, MaxIcon, PhoneIcon, WhatsAppIcon } from "./icons";
+import { MapPinIcon, MaxIcon, PhoneIcon, TelegramIcon, VkIcon, WhatsAppIcon } from "./icons";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { PICKUP_POINTS } from "@/lib/fulfillment";
+
+const COMMUNITY_LINKS = [
+  { label: "Группа в Telegram", href: "https://t.me/iHerb_174", icon: TelegramIcon },
+  { label: "Группа в МАКС", href: "https://max.ru/join/bTbSXUrQ4H8Kkm4lRo6wnm4CAGxg4_TnEOy1_n8GpoQ", icon: MaxIcon },
+];
 
 export function Footer() {
   const { settings } = useSiteSettings();
@@ -74,6 +79,26 @@ export function Footer() {
             <p className="mt-3 text-sm text-accent-100">
               Оригинальная продукция iHerb с доставкой по Челябинску и всей России.
             </p>
+          </div>
+        </div>
+
+        <div className="mt-10 border-t border-white/10 pt-8">
+          <p className="text-sm font-semibold text-white">Наши группы</p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-3">
+            {[...COMMUNITY_LINKS, { label: "Группа в ВКонтакте", href: settings.vkUrl, icon: VkIcon }].map(
+              (link) => (
+                <a
+                  key={link.label}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 rounded-2xl border border-white/10 bg-white/5 p-3 text-sm text-accent-100 transition hover:bg-white/10 hover:text-white"
+                >
+                  <link.icon className="h-4 w-4 shrink-0" />
+                  {link.label}
+                </a>
+              )
+            )}
           </div>
         </div>
 

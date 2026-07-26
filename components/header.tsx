@@ -7,7 +7,6 @@ import { CartIcon, CloseIcon, DotsIcon, MaxIcon, MenuIcon, PhoneIcon, TelegramIc
 import { useCart } from "@/lib/cart-context";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { buildWhatsAppLink } from "@/lib/order";
-import { assetPath } from "@/lib/asset-path";
 
 export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -32,7 +31,7 @@ export function Header() {
     <header className="sticky top-0 z-40 border-b border-line bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link href="/" className="flex items-center">
-          <Image src={assetPath("/logo.png")} alt={settings.name} width={2048} height={768} className="h-8 w-auto sm:h-9 lg:h-12" priority />
+          <Image src="/logo.png" alt={settings.name} width={2048} height={768} className="h-8 w-auto sm:h-9 lg:h-12" priority />
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-medium text-brand-800 md:flex">

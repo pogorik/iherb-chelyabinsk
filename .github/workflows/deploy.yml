@@ -1,60 +1,50 @@
-name: Deploy to GitHub Pages
+name: Deploy to Timeweb VPS
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
+      - name: Add VPS to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Set up SSH key
+        run: |
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
 
-      - name: Build static site
-        env:
-          BASE_PATH: /${{ github.event.repository.name }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-        run: npm run build
+      # .env.local живёт только на сервере и никогда не перезаписывается
+      # деплоем — исключаем его явно, наравне с node_modules/.next/.git.
+      - name: Sync source to VPS
+        run: |
+          rsync -az --delete \
+            --exclude 'node_modules' \
+            --exclude '.next' \
+            --exclude '.git' \
+            --exclude '.env*' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_APP_DIR }}"
 
-      - name: Ensure .nojekyll
-        run: touch out/.nojekyll
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: out
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Install, build and reload on VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" '
+            set -e
+            cd "${{ secrets.VPS_APP_DIR }}"
+            npm ci
+            npm run build
+            pm2 reload iherb-chelyabinsk --update-env || pm2 start npm --name iherb-chelyabinsk -- start
+            pm2 save
+          '
