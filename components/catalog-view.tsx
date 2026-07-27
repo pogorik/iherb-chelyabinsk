@@ -8,6 +8,7 @@ import { ProductCard } from "./product-card";
 import { FilterSidebar } from "./filter-sidebar";
 import { Button } from "./button";
 import { useCatalogData } from "@/lib/catalog-data-context";
+import { useQuickView } from "@/lib/quickview-context";
 import type { AgeGroup } from "@/lib/types";
 
 type SortKey = "default" | "price-asc" | "price-desc" | "name-asc" | "rating-desc";
@@ -20,6 +21,7 @@ function toggleValue(list: string[], value: string): string[] {
 export function CatalogView() {
   const searchParams = useSearchParams();
   const { products: allProducts, purposes: purposeOptions, brands: brandOptions, loading } = useCatalogData();
+  const { open: openQuickView } = useQuickView();
   // Товары не в наличии видны только в админке, покупателю на витрине не показываем вовсе.
   const products = useMemo(() => allProducts.filter((product) => product.inStock), [allProducts]);
 
@@ -60,6 +62,19 @@ export function CatalogView() {
     if (searchParams.get("sale") === "1") setSaleOnly(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const productParam = searchParams.get("product");
+  const openedFromLinkRef = useRef(false);
+  useEffect(() => {
+    // Ссылка вида /catalog?product=<slug> (её выдаёт админка) должна сразу
+    // открывать быстрый просмотр нужного товара, включая товары не в наличии.
+    if (openedFromLinkRef.current || !productParam || allProducts.length === 0) return;
+    const target = allProducts.find((p) => p.slug === productParam || p.id === productParam);
+    if (target) {
+      openedFromLinkRef.current = true;
+      openQuickView(target);
+    }
+  }, [productParam, allProducts, openQuickView]);
 
   const filtered = useMemo(() => {
     return products.filter((product) => {

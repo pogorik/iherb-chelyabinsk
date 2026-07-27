@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useCatalogData } from "@/lib/catalog-data-context";
 import { supabase } from "@/lib/supabase";
+import { assetPath } from "@/lib/asset-path";
 import { Button } from "@/components/button";
 import { formatPrice } from "@/lib/utils";
 
@@ -14,6 +15,14 @@ export default function AdminProductsPage() {
   const [search, setSearch] = useState("");
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  async function handleCopyLink(id: string, slug: string) {
+    const url = `${window.location.origin}${assetPath("/catalog")}?product=${slug}`;
+    await navigator.clipboard.writeText(url);
+    setCopiedId(id);
+    setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 1500);
+  }
 
   const filtered = products.filter((product) => {
     if (stockFilter === "in-stock" && !product.inStock) return false;
@@ -105,6 +114,13 @@ export default function AdminProductsPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleCopyLink(product.id, product.slug)}
+                        className="rounded-full border border-line px-3 py-1.5 text-xs font-medium text-brand-900 transition hover:bg-brand-50"
+                      >
+                        {copiedId === product.id ? "Ссылка скопирована" : "Скопировать ссылку"}
+                      </button>
                       <Link
                         href={`/admin/products/edit?id=${product.id}`}
                         className="rounded-full border border-line px-3 py-1.5 text-xs font-medium text-brand-900 transition hover:bg-brand-50"
