@@ -58,10 +58,3 @@ export function buildWhatsAppLink(
 export function buildTelegramLink(message: string, telegramUsername: string): string {
   return `https://t.me/${telegramUsername}?text=${encodeURIComponent(message)}`;
 }
-
-// У MAX нет диплинка на чат с конкретным контактом с готовым текстом —
-// только на общий экран "Отправить в MAX", где получателя выбирает сам
-// пользователь (see dev.max.ru/help/deeplinks).
-export function buildMaxShareLink(message: string): string {
-  return `https://max.ru/:share?text=${encodeURIComponent(message)}`;
-}
