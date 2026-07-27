@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CartIcon, CheckIcon, CloseIcon, MaxIcon, TelegramIcon, WhatsAppIcon } from "./icons";
+import { CartIcon, CheckIcon, CloseIcon, MaxIcon, TelegramIcon, VkIcon, WhatsAppIcon } from "./icons";
 import { QuantityStepper } from "./quantity-stepper";
 import { ProductImage } from "./product-image";
 import { Button } from "./button";
@@ -208,7 +208,7 @@ export function CartDrawer() {
           <form onSubmit={handleSubmitOrder} className="flex flex-1 flex-col p-4">
             <p className="text-sm text-zinc-500">
               Оставьте контакты — мы соберём сообщение с заказом, и вы сразу сможете отправить его
-              нам в WhatsApp, Telegram или MAX.
+              нам в WhatsApp, Telegram, MAX или ВКонтакте.
             </p>
             <div className="mt-4 space-y-3">
               <label className="block text-sm">
@@ -350,6 +350,21 @@ export function CartDrawer() {
               >
                 <MaxIcon className="h-4 w-4" />
                 Написать в MAX (текст скопируется)
+              </a>
+              <a
+                href={settings.vkUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  // ВК тоже не поддерживает предзаполнение видимого текста
+                  // сообщения по ссылке — копируем в буфер, как и для MAX.
+                  handleCopy();
+                  clear();
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#0077FF] py-3 text-sm font-medium text-white transition hover:brightness-95"
+              >
+                <VkIcon className="h-4 w-4" />
+                Написать во ВКонтакте (текст скопируется)
               </a>
               <Button variant="outline-dark" size="lg" fullWidth onClick={handleCopy}>
                 {copied ? "Скопировано" : "Скопировать текст заявки"}
