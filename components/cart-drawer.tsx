@@ -7,6 +7,7 @@ import { ProductImage } from "./product-image";
 import { Button } from "./button";
 import { useCart } from "@/lib/cart-context";
 import { useSiteSettings } from "@/lib/site-settings-context";
+import { siteConfig } from "@/lib/config";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/utils";
 import { buildOrderMessage, buildWhatsAppLink, buildTelegramLink } from "@/lib/order";
@@ -352,7 +353,7 @@ export function CartDrawer() {
                 Написать в MAX (текст скопируется)
               </a>
               <a
-                href={settings.vkUrl}
+                href={siteConfig.vkManagerHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={() => {
