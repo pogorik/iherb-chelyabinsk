@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { CartIcon, CheckIcon, CloseIcon, WhatsAppIcon } from "./icons";
+import { CartIcon, CheckIcon, CloseIcon, MaxIcon, TelegramIcon, WhatsAppIcon } from "./icons";
 import { QuantityStepper } from "./quantity-stepper";
 import { ProductImage } from "./product-image";
 import { Button } from "./button";
@@ -9,7 +9,7 @@ import { useCart } from "@/lib/cart-context";
 import { useSiteSettings } from "@/lib/site-settings-context";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/utils";
-import { buildOrderMessage, buildWhatsAppLink } from "@/lib/order";
+import { buildOrderMessage, buildWhatsAppLink, buildTelegramLink, buildMaxShareLink } from "@/lib/order";
 import { FULFILLMENT_OPTIONS } from "@/lib/fulfillment";
 
 type Step = "cart" | "checkout" | "done";
@@ -208,7 +208,7 @@ export function CartDrawer() {
           <form onSubmit={handleSubmitOrder} className="flex flex-1 flex-col p-4">
             <p className="text-sm text-zinc-500">
               Оставьте контакты — мы соберём сообщение с заказом, и вы сразу сможете отправить его
-              нам в WhatsApp.
+              нам в WhatsApp, Telegram или MAX.
             </p>
             <div className="mt-4 space-y-3">
               <label className="block text-sm">
@@ -308,7 +308,7 @@ export function CartDrawer() {
           <div className="flex flex-1 flex-col p-4">
             <div className="flex items-center gap-2 rounded-xl bg-brand-50 p-3 text-sm text-brand-700">
               <CheckIcon className="h-4 w-4 shrink-0" />
-              Сообщение с заказом готово. Отправьте его нам в WhatsApp — менеджер свяжется с вами
+              Сообщение с заказом готово. Выберите, куда его отправить — менеджер свяжется с вами
               для подтверждения.
             </div>
             <pre className="mt-4 flex-1 overflow-y-auto whitespace-pre-wrap rounded-xl bg-sand-50 p-3 text-xs leading-relaxed text-zinc-700">
@@ -324,6 +324,26 @@ export function CartDrawer() {
               >
                 <WhatsAppIcon className="h-4 w-4" />
                 Отправить в WhatsApp
+              </a>
+              <a
+                href={buildTelegramLink(orderText, settings.telegramUsername)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => clear()}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#229ED9] py-3 text-sm font-medium text-white transition hover:brightness-95"
+              >
+                <TelegramIcon className="h-4 w-4" />
+                Отправить в Telegram
+              </a>
+              <a
+                href={buildMaxShareLink(orderText)}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => clear()}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-900 py-3 text-sm font-medium text-white transition hover:brightness-110"
+              >
+                <MaxIcon className="h-4 w-4" />
+                Отправить в MAX
               </a>
               <Button variant="outline-dark" size="lg" fullWidth onClick={handleCopy}>
                 {copied ? "Скопировано" : "Скопировать текст заявки"}
