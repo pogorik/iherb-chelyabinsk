@@ -246,6 +246,16 @@ export function MapPinIcon({ className }: IconProps) {
   );
 }
 
+export function LinkIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M9 15 15 9" />
+      <path d="M10.5 6.5 12 5a4 4 0 0 1 5.66 5.66L16 12.2" />
+      <path d="M13.5 17.5 12 19a4 4 0 0 1-5.66-5.66L8 11.8" />
+    </svg>
+  );
+}
+
 export function CheckIcon({ className }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} {...base}>

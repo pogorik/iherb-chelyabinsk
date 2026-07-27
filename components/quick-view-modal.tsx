@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CartIcon, CloseIcon } from "./icons";
+import { CartIcon, CheckIcon, CloseIcon, LinkIcon } from "./icons";
 import { ProductImage } from "./product-image";
 import { QuantityStepper } from "./quantity-stepper";
 import { Button } from "./button";
 import { useQuickView } from "@/lib/quickview-context";
 import { useCart } from "@/lib/cart-context";
+import { siteConfig } from "@/lib/config";
+import { assetPath } from "@/lib/asset-path";
 import { formatPrice } from "@/lib/utils";
 import { ACTIVE_COMPONENTS, FORM_LABELS } from "@/lib/products";
 import { useCatalogData } from "@/lib/catalog-data-context";
@@ -17,15 +19,26 @@ export function QuickViewModal() {
   const { purposes } = useCatalogData();
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Каждый раз, когда через быстрый просмотр открывают другой товар,
   // галерея должна вернуться к первому фото, а не остаться на прошлом индексе.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- сброс состояния при смене товара, не побочный эффект рендера
     setActiveImage(0);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- сброс состояния при смене товара, не побочный эффект рендера
+    setLinkCopied(false);
   }, [product?.id]);
 
   if (!product) return null;
+
+  async function handleCopyLink() {
+    if (!product) return;
+    const url = `${siteConfig.siteUrl}${assetPath("/catalog")}?product=${product.slug}`;
+    await navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 1500);
+  }
 
   const photos = product.imageUrls ?? [];
 
@@ -47,14 +60,32 @@ export function QuickViewModal() {
       >
         <div className="flex items-center justify-between border-b border-line p-4">
           <p className="text-sm font-medium text-brand-900">Быстрый просмотр</p>
-          <button
-            type="button"
-            onClick={close}
-            className="rounded-full p-1.5 text-zinc-500 transition hover:bg-zinc-100"
-            aria-label="Закрыть"
-          >
-            <CloseIcon className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-medium text-zinc-500 transition hover:bg-zinc-100"
+              aria-label="Скопировать ссылку на товар"
+            >
+              {linkCopied ? (
+                <>
+                  <CheckIcon className="h-4 w-4" /> Скопировано
+                </>
+              ) : (
+                <>
+                  <LinkIcon className="h-4 w-4" /> Ссылка
+                </>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={close}
+              className="rounded-full p-1.5 text-zinc-500 transition hover:bg-zinc-100"
+              aria-label="Закрыть"
+            >
+              <CloseIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-6 p-5 sm:grid-cols-2 sm:p-6">
