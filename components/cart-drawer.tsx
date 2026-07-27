@@ -339,11 +339,17 @@ export function CartDrawer() {
                 href={settings.maxHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => clear()}
+                onClick={() => {
+                  // MAX не поддерживает диплинк с готовым текстом на конкретного
+                  // контакта — копируем текст в буфер, чтобы его оставалось
+                  // только вставить в открывшемся чате.
+                  handleCopy();
+                  clear();
+                }}
                 className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-900 py-3 text-sm font-medium text-white transition hover:brightness-110"
               >
                 <MaxIcon className="h-4 w-4" />
-                Написать в MAX
+                Написать в MAX (текст скопируется)
               </a>
               <Button variant="outline-dark" size="lg" fullWidth onClick={handleCopy}>
                 {copied ? "Скопировано" : "Скопировать текст заявки"}
