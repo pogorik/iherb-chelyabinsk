@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCatalogData } from "@/lib/catalog-data-context";
 import { supabase } from "@/lib/supabase";
 import { assetPath } from "@/lib/asset-path";
+import { siteConfig } from "@/lib/config";
 import { Button } from "@/components/button";
 import { formatPrice } from "@/lib/utils";
 
@@ -18,7 +19,9 @@ export default function AdminProductsPage() {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   async function handleCopyLink(id: string, slug: string) {
-    const url = `${window.location.origin}${assetPath("/catalog")}?product=${slug}`;
+    // siteConfig.siteUrl (не window.location.origin) — чтобы ссылка на клиента
+    // показывала читаемый домен айхерб-74.рф, а не punycode xn--...
+    const url = `${siteConfig.siteUrl}${assetPath("/catalog")}?product=${slug}`;
     await navigator.clipboard.writeText(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 1500);
