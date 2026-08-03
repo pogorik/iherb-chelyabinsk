@@ -1,0 +1,20 @@
+name: VPS Cleanup and Final Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+
+      - name: PM2 stability and delete test orders
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'echo "--- pm2 status ---"; pm2 list; echo "--- delete test orders ---"; sudo -n -u postgres psql -d iherb -c "delete from orders where customer_name in ('"'"'Тест Тестов'"'"', '"'"'Тест Проверка'"'"') returning id, customer_name"; echo "--- remaining order count ---"; sudo -n -u postgres psql -d iherb -c "select count(*) from orders"'
