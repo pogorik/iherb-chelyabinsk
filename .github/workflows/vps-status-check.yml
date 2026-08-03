@@ -18,3 +18,8 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
             'PID=$(pm2 jlist 2>/dev/null | node -e "const d=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")); const p=d.find(x=>x.name===\"iherb-chelyabinsk\"); console.log(p ? p.pid : \"\")"); echo "PID=$PID"; echo "--- actual running process env var NAMES only (values redacted) ---"; sudo -n cat /proc/$PID/environ 2>&1 | tr "\\0" "\\n" | cut -d= -f1; echo "--- without sudo ---"; cat /proc/$PID/environ 2>&1 | tr "\\0" "\\n" | cut -d= -f1'
+
+      - name: Check for a local Postgres instance
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'echo "--- systemd postgres service ---"; systemctl list-units --type=service 2>&1 | grep -i postgres; echo "--- docker containers ---"; docker ps -a 2>&1 | grep -i postgres; echo "--- listening on 5432 ---"; ss -ltnp 2>&1 | grep 5432; echo "--- pg_lsclusters ---"; pg_lsclusters 2>&1; echo "--- postgres data dirs ---"; find /var/lib/postgresql /etc/postgresql -maxdepth 2 2>&1'
