@@ -1,0 +1,46 @@
+name: VPS Setup Env File
+
+on:
+  workflow_dispatch:
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+
+      - name: Reset DB password and write .env.local on the VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+          "APP_DIR='${{ secrets.VPS_APP_DIR }}' S3_ENDPOINT='${{ secrets.S3_ENDPOINT }}' S3_REGION='${{ secrets.S3_REGION }}' S3_ACCESS_KEY_ID='${{ secrets.S3_ACCESS_KEY_ID }}' S3_SECRET_ACCESS_KEY='${{ secrets.S3_SECRET_ACCESS_KEY }}' S3_BUCKET='7457d9b0-a40d-4a27-a388-1d48a5faadf7' bash -s" << 'REMOTE_SCRIPT'
+          set -e
+          cd "$APP_DIR"
+          DB_PASS=$(openssl rand -hex 24)
+          SESSION_SECRET=$(openssl rand -base64 32)
+          sudo -n -u postgres psql -c "ALTER ROLE iherb_app WITH PASSWORD '${DB_PASS}'" > /dev/null
+
+          cat > .env.local << ENVEOF
+          DATABASE_URL=postgresql://iherb_app:${DB_PASS}@localhost:5432/iherb
+          DATABASE_SSL=false
+          S3_ENDPOINT=${S3_ENDPOINT}
+          S3_REGION=${S3_REGION}
+          S3_BUCKET=${S3_BUCKET}
+          S3_ACCESS_KEY_ID=${S3_ACCESS_KEY_ID}
+          S3_SECRET_ACCESS_KEY=${S3_SECRET_ACCESS_KEY}
+          S3_PUBLIC_URL=${S3_ENDPOINT}/${S3_BUCKET}
+          SESSION_SECRET=${SESSION_SECRET}
+          COOKIE_SECURE=false
+          ENVEOF
+          chmod 600 .env.local
+          echo "Written .env.local with $(wc -l < .env.local) lines (values not shown)."
+          REMOTE_SCRIPT
+
+      - name: Restart app to pick up new env
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'cd "${{ secrets.VPS_APP_DIR }}" && pm2 restart iherb-chelyabinsk --update-env && pm2 save'
