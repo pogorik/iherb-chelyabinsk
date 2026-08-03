@@ -12,12 +12,6 @@ declare global {
 }
 
 function createPool(): Pool {
-  try {
-    require("fs").appendFileSync(
-      "/tmp/db-debug.log",
-      `${new Date().toISOString()} createPool called, DATABASE_URL length=${process.env.DATABASE_URL?.length ?? "undefined"}\n`
-    );
-  } catch {}
   return new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_SSL === "false" ? undefined : { rejectUnauthorized: false },
