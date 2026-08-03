@@ -24,7 +24,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
             'echo "--- systemd postgres service ---"; systemctl list-units --type=service 2>&1 | grep -i postgres; echo "--- docker containers ---"; docker ps -a 2>&1 | grep -i postgres; echo "--- listening on 5432 ---"; ss -ltnp 2>&1 | grep 5432; echo "--- pg_lsclusters ---"; pg_lsclusters 2>&1; echo "--- postgres data dirs ---"; find /var/lib/postgresql /etc/postgresql -maxdepth 2 2>&1'
 
-      - name: Check if built output contains the debug string
+      - name: Clean test - flush logs, hit endpoint locally, check fresh output
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            "cd '${{ secrets.VPS_APP_DIR }}' && grep -rl 'DEBUG DATABASE_URL' .next/ 2>&1 | head -5; echo '--- .next build id / mtime ---'; cat .next/BUILD_ID 2>&1; stat -c '%y' .next 2>&1; echo '--- current git-independent source check ---'; grep -c 'DEBUG DATABASE_URL' lib/db.ts 2>&1"
+            'pm2 flush iherb-chelyabinsk; sleep 1; curl -s -o /dev/null -w "HTTP %{http_code}\n" http://localhost:3000/api/products; sleep 1; echo "--- out log ---"; cat ~/.pm2/logs/iherb-chelyabinsk-out.log; echo "--- error log ---"; cat ~/.pm2/logs/iherb-chelyabinsk-error.log'
