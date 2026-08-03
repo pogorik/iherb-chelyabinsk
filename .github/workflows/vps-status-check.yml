@@ -17,4 +17,4 @@ jobs:
       - name: Report PM2 and app directory status
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            'echo "--- pm2 list ---"; pm2 list; echo "--- app dir ---"; ls -la "${{ secrets.VPS_APP_DIR }}"; echo "--- git log ---"; cd "${{ secrets.VPS_APP_DIR }}" && git log -3 --oneline 2>&1; echo "--- node --version ---"; node --version'
+            'cd "${{ secrets.VPS_APP_DIR }}"; echo "--- env files ---"; ls -la .env* 2>&1; echo "--- env var NAMES only (no values) from .env.local ---"; cut -d= -f1 .env.local 2>&1; echo "--- pm2 describe env keys ---"; pm2 describe iherb-chelyabinsk 2>&1 | grep -i "env:" -A 30 | grep -oE "^\s*[A-Z_]+:" | head -30'
