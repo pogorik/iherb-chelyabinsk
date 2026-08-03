@@ -1,0 +1,20 @@
+name: VPS Status Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  status:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+
+      - name: Report PM2 and app directory status
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'echo "--- pm2 list ---"; pm2 list; echo "--- app dir ---"; ls -la "${{ secrets.VPS_APP_DIR }}"; echo "--- git log ---"; cd "${{ secrets.VPS_APP_DIR }}" && git log -3 --oneline 2>&1; echo "--- node --version ---"; node --version'
