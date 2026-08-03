@@ -12,6 +12,7 @@ declare global {
 }
 
 function createPool(): Pool {
+  console.log("DEBUG DATABASE_URL length:", process.env.DATABASE_URL?.length ?? "undefined");
   return new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.DATABASE_SSL === "false" ? undefined : { rejectUnauthorized: false },
