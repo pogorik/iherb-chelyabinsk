@@ -20,5 +20,5 @@ rm -rf .next
 # в обход npm run.
 ./node_modules/.bin/next build
 pm2 delete iherb-chelyabinsk 2>/dev/null || true
-pm2 start npm --name iherb-chelyabinsk -- start
+pm2 start ./node_modules/.bin/next --name iherb-chelyabinsk -- start
 pm2 save
