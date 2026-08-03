@@ -8,7 +8,6 @@ import { Button } from "./button";
 import { useQuickView } from "@/lib/quickview-context";
 import { useCart } from "@/lib/cart-context";
 import { siteConfig } from "@/lib/config";
-import { assetPath } from "@/lib/asset-path";
 import { formatPrice } from "@/lib/utils";
 import { ACTIVE_COMPONENTS, FORM_LABELS } from "@/lib/products";
 import { useCatalogData } from "@/lib/catalog-data-context";
@@ -34,7 +33,7 @@ export function QuickViewModal() {
 
   async function handleCopyLink() {
     if (!product) return;
-    const url = `${siteConfig.siteUrl}${assetPath("/catalog")}?product=${product.slug}`;
+    const url = `${siteConfig.siteUrl}/catalog?product=${product.slug}`;
     await navigator.clipboard.writeText(url);
     setLinkCopied(true);
     setTimeout(() => setLinkCopied(false), 1500);
