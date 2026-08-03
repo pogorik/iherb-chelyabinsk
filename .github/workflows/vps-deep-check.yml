@@ -1,0 +1,20 @@
+name: VPS Deep Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+
+      - name: Full nginx config dump and recent access log
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'echo "=== all enabled sites ==="; ls -la /etc/nginx/sites-enabled/; echo "=== nginx -T (full merged config) ==="; sudo -n nginx -T 2>&1 | grep -A 20 "server {"; echo "=== recent access log (last 30) ==="; sudo -n tail -30 /var/log/nginx/access.log 2>&1; echo "=== recent error log (last 30) ==="; sudo -n tail -30 /var/log/nginx/error.log 2>&1'
