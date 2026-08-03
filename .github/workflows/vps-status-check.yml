@@ -24,19 +24,7 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
             'echo "--- systemd postgres service ---"; systemctl list-units --type=service 2>&1 | grep -i postgres; echo "--- docker containers ---"; docker ps -a 2>&1 | grep -i postgres; echo "--- listening on 5432 ---"; ss -ltnp 2>&1 | grep 5432; echo "--- pg_lsclusters ---"; pg_lsclusters 2>&1; echo "--- postgres data dirs ---"; find /var/lib/postgresql /etc/postgresql -maxdepth 2 2>&1'
 
-      - name: Compare running process env vs file (lengths only)
+      - name: Show debug log line
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            "APP_DIR='${{ secrets.VPS_APP_DIR }}' bash -s" << 'REMOTE_SCRIPT'
-          cd "$APP_DIR"
-          PID=$(pm2 jlist | node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); const p=d.find(x=>x.name==='iherb-chelyabinsk'); console.log(p?p.pid:'')")
-          echo "PID=$PID"
-          echo "--- process start time ---"
-          ps -o pid,lstart -p "$PID"
-          echo "--- DATABASE_URL length in RUNNING process ---"
-          sudo -n cat /proc/$PID/environ 2>/dev/null | tr '\0' '\n' | grep '^DATABASE_URL=' | awk -F= '{print length($0)-14}'
-          echo "--- DATABASE_URL length in CURRENT .env.local file ---"
-          grep '^DATABASE_URL=' .env.local | awk -F= '{print length($0)-14}'
-          echo "--- file last modified ---"
-          stat -c '%y' .env.local
-          REMOTE_SCRIPT
+            'pm2 logs iherb-chelyabinsk --out --lines 100 --nostream 2>&1 | grep -i "DEBUG DATABASE_URL" '
