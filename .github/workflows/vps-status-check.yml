@@ -17,4 +17,4 @@ jobs:
       - name: Report PM2 and app directory status
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            'cd "${{ secrets.VPS_APP_DIR }}"; echo "--- find any .env files anywhere under app dir ---"; find . -maxdepth 2 -iname ".env*" 2>&1; echo "--- pm2 env var NAMES only (values redacted) ---"; pm2 jlist 2>/dev/null | node -e "const d=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")); const p=d.find(x=>x.name===\"iherb-chelyabinsk\"); console.log(p ? Object.keys(p.pm2_env.env||{}).join(\"\\n\") : \"not found\")"'
+            'PID=$(pm2 jlist 2>/dev/null | node -e "const d=JSON.parse(require(\"fs\").readFileSync(0,\"utf8\")); const p=d.find(x=>x.name===\"iherb-chelyabinsk\"); console.log(p ? p.pid : \"\")"); echo "PID=$PID"; echo "--- actual running process env var NAMES only (values redacted) ---"; sudo -n cat /proc/$PID/environ 2>&1 | tr "\\0" "\\n" | cut -d= -f1; echo "--- without sudo ---"; cat /proc/$PID/environ 2>&1 | tr "\\0" "\\n" | cut -d= -f1'
