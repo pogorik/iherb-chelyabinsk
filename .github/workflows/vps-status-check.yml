@@ -24,7 +24,12 @@ jobs:
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
             'echo "--- systemd postgres service ---"; systemctl list-units --type=service 2>&1 | grep -i postgres; echo "--- docker containers ---"; docker ps -a 2>&1 | grep -i postgres; echo "--- listening on 5432 ---"; ss -ltnp 2>&1 | grep 5432; echo "--- pg_lsclusters ---"; pg_lsclusters 2>&1; echo "--- postgres data dirs ---"; find /var/lib/postgresql /etc/postgresql -maxdepth 2 2>&1'
 
-      - name: Tail recent PM2 logs
+      - name: Test DATABASE_URL directly (no values echoed)
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            'pm2 logs iherb-chelyabinsk --lines 60 --nostream 2>&1'
+            "APP_DIR='${{ secrets.VPS_APP_DIR }}' bash -s" << 'REMOTE_SCRIPT'
+          cd "$APP_DIR"
+          set -a; source .env.local; set +a
+          echo "connecting via psql as iherb_app over TCP"
+          psql "$DATABASE_URL" -c "select current_user, now()" 2>&1
+          REMOTE_SCRIPT
