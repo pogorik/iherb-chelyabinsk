@@ -23,3 +23,8 @@ jobs:
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
             'echo "--- systemd postgres service ---"; systemctl list-units --type=service 2>&1 | grep -i postgres; echo "--- docker containers ---"; docker ps -a 2>&1 | grep -i postgres; echo "--- listening on 5432 ---"; ss -ltnp 2>&1 | grep 5432; echo "--- pg_lsclusters ---"; pg_lsclusters 2>&1; echo "--- postgres data dirs ---"; find /var/lib/postgresql /etc/postgresql -maxdepth 2 2>&1'
+
+      - name: Check sudo access and existing databases via peer auth
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'echo "--- sudo -n check ---"; sudo -n true 2>&1 && echo "passwordless sudo: YES" || echo "passwordless sudo: NO"; echo "--- databases (peer auth as postgres) ---"; sudo -n -u postgres psql -c "\l" 2>&1; echo "--- roles ---"; sudo -n -u postgres psql -c "\du" 2>&1; echo "--- tables in likely db ---"; sudo -n -u postgres psql -d iherb -c "\dt" 2>&1; sudo -n -u postgres psql -d nutrihome -c "\dt" 2>&1; echo "--- row counts if products table found ---"; sudo -n -u postgres psql -d iherb -c "select count(*) from products" 2>&1'
