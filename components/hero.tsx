@@ -6,7 +6,6 @@ import { Button } from "./button";
 import { ContactsModal } from "./contacts-modal";
 import { GlobeIcon, TruckIcon } from "./icons";
 import { useSiteSettings } from "@/lib/site-settings-context";
-import { assetPath } from "@/lib/asset-path";
 
 export function Hero() {
   const { settings } = useSiteSettings();
@@ -15,7 +14,7 @@ export function Hero() {
   return (
     <section className="relative overflow-hidden px-4 py-10 sm:px-6 sm:py-14 lg:px-6 lg:py-10">
       <Image
-        src={assetPath("/hero-bg.png")}
+        src="/hero-bg.png"
         alt=""
         fill
         priority

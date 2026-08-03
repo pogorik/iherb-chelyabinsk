@@ -9,7 +9,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { isSupabaseConfigured, supabase } from "./supabase";
 import { siteConfig as fallbackConfig } from "./config";
 
 export interface SiteSettings {
@@ -104,19 +103,16 @@ export function SiteSettingsProvider({ children }: { children: ReactNode }) {
     async function load() {
       setLoading(true);
 
-      if (!isSupabaseConfigured) {
-        // Supabase ещё не подключён — остаёмся на статичном фолбэке из lib/config.ts.
-        if (!cancelled) setLoading(false);
-        return;
-      }
-
       try {
-        const { data } = await supabase.from("site_settings").select("*").limit(1).maybeSingle();
+        const response = await fetch("/api/site-settings");
         if (cancelled) return;
-        if (data) setSettings(mapSettingsRow(data as SettingsRow));
+        if (response.ok) {
+          const data = (await response.json()) as SettingsRow | null;
+          if (data) setSettings(mapSettingsRow(data));
+        }
       } catch (error) {
-        // Supabase недоступен — остаёмся на статичном фолбэке из lib/config.ts.
-        console.error("Не удалось загрузить настройки сайта из Supabase", error);
+        // Backend недоступен — остаёмся на статичном фолбэке из lib/config.ts.
+        console.error("Не удалось загрузить настройки сайта", error);
       } finally {
         if (!cancelled) setLoading(false);
       }

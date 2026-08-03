@@ -1,77 +1,49 @@
-name: Deploy to GitHub Pages
+name: Deploy to Timeweb VPS
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
-  group: pages
+  group: deploy
   cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Determine base path
-        # С кастомным доменом (файл CNAME в репозитории) сайт отдаётся с корня
-        # домена, без подпути — иначе с /<имя-репозитория>/ на github.io.
-        id: base-path
+      - name: Add VPS to known_hosts
         run: |
-          if [ -f CNAME ]; then
-            echo "value=" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=/${{ github.event.repository.name }}" >> "$GITHUB_OUTPUT"
-          fi
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Build static site
-        env:
-          BASE_PATH: ${{ steps.base-path.outputs.value }}
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-        run: npm run build
-
-      - name: Ensure .nojekyll
-        run: touch out/.nojekyll
-
-      - name: Copy CNAME into build output
+      - name: Set up SSH key
         run: |
-          if [ -f CNAME ]; then
-            cp CNAME out/CNAME
-          fi
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+      - name: Ensure remote app directory exists
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'mkdir -p "${{ secrets.VPS_APP_DIR }}"'
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: out
+      # .env.local живёт только на сервере и никогда не перезаписывается
+      # деплоем — исключаем его явно, наравне с node_modules/.next/.git.
+      - name: Sync source to VPS
+        run: |
+          rsync -az --delete \
+            --exclude 'node_modules' \
+            --exclude '.next' \
+            --exclude '.git' \
+            --exclude '.env*' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_APP_DIR }}"
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Install, build and reload on VPS
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "bash '${{ secrets.VPS_APP_DIR }}/scripts/deploy-remote.sh'"

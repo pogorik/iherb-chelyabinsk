@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/lib/utils";
 
 type OrderStatus = "new" | "processing" | "done" | "cancelled";
@@ -49,11 +48,8 @@ export default function AdminOrdersPage() {
   async function load() {
     setLoading(true);
     try {
-      const { data } = await supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
-      setOrders((data as OrderRow[] | null) ?? []);
+      const response = await fetch("/api/orders");
+      setOrders(response.ok ? ((await response.json()) as OrderRow[]) : []);
     } catch (error) {
       console.error("Не удалось загрузить заказы", error);
       setOrders([]);
@@ -70,10 +66,15 @@ export default function AdminOrdersPage() {
 
   async function handleStatusChange(id: string, status: OrderStatus) {
     setUpdatingId(id);
-    const { error } = await supabase.from("orders").update({ status }).eq("id", id);
+    const response = await fetch(`/api/orders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    });
     setUpdatingId(null);
-    if (error) {
-      window.alert("Не удалось обновить статус: " + error.message);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      window.alert("Не удалось обновить статус: " + (data.error ?? response.statusText));
       return;
     }
     setOrders((prev) => prev.map((order) => (order.id === id ? { ...order, status } : order)));

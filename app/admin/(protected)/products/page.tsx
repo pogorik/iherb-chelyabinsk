@@ -3,8 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useCatalogData } from "@/lib/catalog-data-context";
-import { supabase } from "@/lib/supabase";
-import { assetPath } from "@/lib/asset-path";
 import { siteConfig } from "@/lib/config";
 import { Button } from "@/components/button";
 import { formatPrice } from "@/lib/utils";
@@ -21,7 +19,7 @@ export default function AdminProductsPage() {
   async function handleCopyLink(id: string, slug: string) {
     // siteConfig.siteUrl (не window.location.origin) — чтобы ссылка на клиента
     // показывала читаемый домен айхерб-74.рф, а не punycode xn--...
-    const url = `${siteConfig.siteUrl}${assetPath("/catalog")}?product=${slug}`;
+    const url = `${siteConfig.siteUrl}/catalog?product=${slug}`;
     await navigator.clipboard.writeText(url);
     setCopiedId(id);
     setTimeout(() => setCopiedId((current) => (current === id ? null : current)), 1500);
@@ -38,10 +36,11 @@ export default function AdminProductsPage() {
   async function handleDelete(id: string, name: string) {
     if (!window.confirm(`Удалить товар «${name}»? Это действие нельзя отменить.`)) return;
     setDeletingId(id);
-    const { error } = await supabase.from("products").delete().eq("id", id);
+    const response = await fetch(`/api/products/${id}`, { method: "DELETE" });
     setDeletingId(null);
-    if (error) {
-      window.alert("Не удалось удалить товар: " + error.message);
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      window.alert("Не удалось удалить товар: " + (data.error ?? response.statusText));
       return;
     }
     refetch();
