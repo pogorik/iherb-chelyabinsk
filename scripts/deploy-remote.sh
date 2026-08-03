@@ -8,17 +8,25 @@ cd "$(dirname "$0")/.."
 
 npm ci
 
-# .next исключён из rsync (см. deploy.yml), поэтому между деплоями остаётся
-# старый .next/cache — Turbopack иногда переиспользует из него устаревший
-# скомпилированный чанк вместо актуального кода. Полная пересборка с нуля
-# каждый раз стоит нескольких секунд, зато не даёт закэшировать баг.
-rm -rf .next
-
+# Собираем во временную папку, а не прямо в .next — иначе весь билд идёт
+# в той же директории, откуда ЖИВОЙ процесс параллельно раздаёт сайт, и
+# запрос, попавший в окно rm+build, читает наполовину пересобранные файлы
+# (отсюда "client reference manifest does not exist" и подобные падения).
 # npm run build (→ "next build" через npm's PATH-обёртку) в этом окружении
 # необъяснимо не находит next, хотя node_modules/.bin/next существует и
 # прекрасно запускается напрямую — поэтому вызываем бинарник напрямую,
 # в обход npm run.
-./node_modules/.bin/next build
-pm2 delete iherb-chelyabinsk 2>/dev/null || true
-pm2 start ./node_modules/.bin/next --name iherb-chelyabinsk -- start
+rm -rf .next-new
+NEXT_DIST_DIR=.next-new ./node_modules/.bin/next build
+
+# Переименование в пределах одной файловой системы атомарно: уже открытые
+# файловые дескрипторы старого процесса остаются валидными и после rename,
+# так что живой процесс продолжает нормально работать со старым .next вплоть
+# до самого pm2 reload ниже — простоя на время билда нет.
+rm -rf .next-old
+[ -d .next ] && mv .next .next-old
+mv .next-new .next
+rm -rf .next-old
+
+pm2 reload iherb-chelyabinsk --update-env || pm2 start ./node_modules/.bin/next --name iherb-chelyabinsk -- start
 pm2 save
