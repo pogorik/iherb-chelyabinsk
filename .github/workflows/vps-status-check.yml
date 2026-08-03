@@ -27,4 +27,4 @@ jobs:
       - name: Show debug log line
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            'pm2 logs iherb-chelyabinsk --out --lines 100 --nostream 2>&1 | grep -i "DEBUG DATABASE_URL" '
+            'pm2 logs iherb-chelyabinsk --out --lines 200 --nostream 2>&1 || true'
