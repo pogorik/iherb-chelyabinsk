@@ -1,0 +1,20 @@
+name: VPS Nginx Recheck
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+
+      - name: Show current nginx config and pm2 status
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            'echo "=== nginx config ==="; cat /etc/nginx/sites-available/iherb; echo "=== nginx -t ==="; sudo -n nginx -t 2>&1; echo "=== pm2 ==="; pm2 list; echo "=== local curl to app directly ==="; curl -s -o /dev/null -w "app port 3000: %{http_code}\n" http://127.0.0.1:3000/'
