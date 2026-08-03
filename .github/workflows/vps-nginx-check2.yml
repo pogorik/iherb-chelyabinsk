@@ -14,7 +14,7 @@ jobs:
           install -m 600 -D /dev/null ~/.ssh/deploy_key
           echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
 
-      - name: Show current nginx config and pm2 status
+      - name: Test from inside the VPS itself
         run: |
           ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
-            'echo "=== nginx config ==="; cat /etc/nginx/sites-available/iherb; echo "=== nginx -t ==="; sudo -n nginx -t 2>&1; echo "=== pm2 ==="; pm2 list; echo "=== local curl to app directly ==="; curl -s -o /dev/null -w "app port 3000: %{http_code}\n" http://127.0.0.1:3000/'
+            'echo "=== localhost:80 with domain Host header ==="; curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" -H "Host: xn---74-5cdfx1a1d1b.xn--p1ai" http://127.0.0.1:80/catalog; echo "=== localhost:443 with domain Host header (https) ==="; curl -sk -o /dev/null -w "%{http_code}\n" -H "Host: xn---74-5cdfx1a1d1b.xn--p1ai" https://127.0.0.1:443/catalog; echo "=== external self test via public IP ==="; curl -s -o /dev/null -w "%{http_code} %{redirect_url}\n" -H "Host: xn---74-5cdfx1a1d1b.xn--p1ai" http://186.246.8.251/catalog'
