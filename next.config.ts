@@ -11,6 +11,12 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // Отдаём VK-фид ещё и по адресу с расширением .yml — VK в поле импорта
+  // ждёт ссылку вида https://site/file.yml. Это тот же живой эндпоинт
+  // /api/vk-feed (динамический, из базы), просто «красивый» адрес.
+  async rewrites() {
+    return [{ source: "/vk.yml", destination: "/api/vk-feed" }];
+  },
 };
 
 export default nextConfig;
