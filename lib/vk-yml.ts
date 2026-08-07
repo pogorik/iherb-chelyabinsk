@@ -101,7 +101,10 @@ export function buildVkYml(products: ProductRow[]): string {
 
       const pics = (p.image_urls && p.image_urls.length ? p.image_urls : [p.image_url])
         .filter((u): u is string => !!u)
-        .slice(0, MAX_PICTURES);
+        .slice(0, MAX_PICTURES)
+        // VK принимает только JPG/PNG/GIF, а фото в базе — webp. Ведём картинки
+        // через конвертер /api/img, который отдаёт их в JPEG.
+        .map((u) => `${VK_SHOP_URL}/api/img?src=${encodeURIComponent(u)}`);
 
       const available = p.in_stock ? "true" : "false";
       const lines: string[] = [];
