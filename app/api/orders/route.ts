@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 import { requireAdmin } from "@/lib/session";
+import { buildOrderNotification, sendTelegramMessage } from "@/lib/telegram";
 
 // Публичный маршрут: посетитель оформляет заказ из корзины (без входа в админку).
 export async function POST(request: Request) {
@@ -24,7 +25,13 @@ export async function POST(request: Request) {
     ]
   );
 
-  return NextResponse.json(rows[0], { status: 201 });
+  const order = rows[0];
+
+  // Уведомление менеджеру в Telegram. sendTelegramMessage сам гасит ошибки,
+  // поэтому проблема с отправкой не помешает оформлению заказа.
+  await sendTelegramMessage(buildOrderNotification(order));
+
+  return NextResponse.json(order, { status: 201 });
 }
 
 // Список заказов — только для админки.
