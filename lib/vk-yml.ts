@@ -45,14 +45,6 @@ const PURPOSE_LABELS: Record<string, string> = {
   "kids-health": "Детское здоровье",
 };
 
-const FORM_LABELS: Record<string, string> = {
-  capsules: "Капсулы",
-  tablets: "Таблетки",
-  powder: "Порошок",
-  liquid: "Жидкость",
-  gummies: "Пастилки",
-};
-
 const MAX_PICTURES = 5; // VK Market показывает до 5 фото на товар.
 
 function xmlEscape(value: string): string {
@@ -106,26 +98,20 @@ export function buildVkYml(products: ProductRow[]): string {
         // через конвертер /api/img, который отдаёт их в JPEG.
         .map((u) => `${VK_SHOP_URL}/api/img?src=${encodeURIComponent(u)}`);
 
-      const available = p.in_stock ? "true" : "false";
+      // Структура ровно как в проверенном мини-фиде, который VK принял:
+      // id, name, price, currencyId, categoryId, picture(s), vendor,
+      // description. Поля available/url/oldprice/param намеренно НЕ включаем —
+      // именно с ними VK бракует файл ("не удалось загрузить файл").
       const lines: string[] = [];
-      lines.push(`    <offer id="${xmlEscape(p.id)}" available="${available}">`);
-      lines.push(`      <url>${xmlEscape(`${VK_SHOP_URL}/catalog?product=${p.slug}`)}</url>`);
+      lines.push(`    <offer id="${xmlEscape(p.id)}">`);
+      lines.push(`      <name>${xmlEscape(name)}</name>`);
       lines.push(`      <price>${Math.round(p.price)}</price>`);
-      if (p.old_price && p.old_price > p.price) {
-        lines.push(`      <oldprice>${Math.round(p.old_price)}</oldprice>`);
-      }
       lines.push(`      <currencyId>RUB</currencyId>`);
       lines.push(`      <categoryId>${categoryId}</categoryId>`);
       for (const pic of pics) lines.push(`      <picture>${xmlEscape(pic)}</picture>`);
       if (vendor) lines.push(`      <vendor>${xmlEscape(vendor)}</vendor>`);
-      lines.push(`      <name>${xmlEscape(name)}</name>`);
       const desc = clean(p.description);
       if (desc) lines.push(`      <description>${xmlEscape(desc)}</description>`);
-      if (FORM_LABELS[p.form]) {
-        lines.push(`      <param name="Форма выпуска">${xmlEscape(FORM_LABELS[p.form])}</param>`);
-      }
-      const volume = clean(p.volume);
-      if (volume) lines.push(`      <param name="Объём">${xmlEscape(volume)}</param>`);
       lines.push(`    </offer>`);
       return lines.join("\n");
     })
