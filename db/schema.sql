@@ -74,6 +74,15 @@ create table if not exists orders (
   status text not null default 'new' check (status in ('new', 'processing', 'done', 'cancelled'))
 );
 
+-- Подписчики Telegram-бота: все, кто написал боту /start, получают
+-- уведомления о новых заказах (см. app/api/telegram/webhook, lib/telegram.ts).
+create table if not exists telegram_subscribers (
+  chat_id bigint primary key,
+  username text,
+  first_name text,
+  created_at timestamptz not null default now()
+);
+
 -- Отдельные учётные записи админки (раньше — Supabase Auth). Пароль хранится
 -- только как bcrypt-хэш, см. lib/session.ts / app/api/auth/login/route.ts.
 create table if not exists admin_users (

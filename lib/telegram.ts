@@ -1,8 +1,10 @@
+import { pool } from "./db";
 import { formatPrice } from "./utils";
 
-// Уведомление о новом заказе в Telegram. Токен бота и chat_id получателя
-// берутся из .env.local (TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID). Если они не
-// заданы — функция тихо ничего не делает, а ошибки отправки не роняют заказ.
+// Уведомления о новых заказах в Telegram. Подписчики — все, кто написал боту
+// /start (см. app/api/telegram/webhook). Их chat_id хранятся в таблице
+// telegram_subscribers. Токен бота — в .env.local (TELEGRAM_BOT_TOKEN).
+// Если токена нет — функции тихо ничего не делают, ошибки не роняют заказ.
 
 interface OrderItem {
   name?: string;
@@ -46,26 +48,54 @@ export function buildOrderNotification(order: OrderRow): string {
     .join("\n");
 }
 
-export async function sendTelegramMessage(text: string): Promise<void> {
+// Отправка одному чату. Возвращает true при успехе. Ошибки не бросает.
+export async function sendTelegramMessage(chatId: string | number, text: string): Promise<boolean> {
   const token = process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_CHAT_ID;
-  if (!token || !chatId) return; // не настроено — молча выходим
+  if (!token) return false;
 
   try {
     const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        disable_web_page_preview: true,
-      }),
+      body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
     });
     if (!res.ok) {
-      console.error("Telegram sendMessage failed:", res.status, await res.text().catch(() => ""));
+      console.error("Telegram sendMessage failed:", chatId, res.status, await res.text().catch(() => ""));
+      return false;
     }
+    return true;
   } catch (err) {
-    // Не даём ошибке уведомления сломать оформление заказа.
-    console.error("Telegram sendMessage error:", err);
+    console.error("Telegram sendMessage error:", chatId, err);
+    return false;
   }
+}
+
+// Рассылка уведомления о заказе всем подписчикам. Если Telegram считает чат
+// недоступным (бот заблокирован/удалён), подписчик убирается из базы.
+export async function broadcastOrderNotification(order: OrderRow): Promise<void> {
+  if (!process.env.TELEGRAM_BOT_TOKEN) return;
+
+  let chatIds: string[];
+  try {
+    const { rows } = await pool.query<{ chat_id: string }>(
+      "select chat_id from telegram_subscribers",
+    );
+    chatIds = rows.map((r) => String(r.chat_id));
+  } catch (err) {
+    console.error("Не удалось прочитать подписчиков Telegram:", err);
+    return;
+  }
+
+  const text = buildOrderNotification(order);
+  await Promise.allSettled(
+    chatIds.map(async (chatId) => {
+      const ok = await sendTelegramMessage(chatId, text);
+      if (!ok) {
+        // чат недоступен (например, бот заблокирован) — чистим подписку
+        await pool
+          .query("delete from telegram_subscribers where chat_id = $1", [chatId])
+          .catch(() => {});
+      }
+    }),
+  );
 }
