@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/session";
-import { generateObjectKey, uploadFile, deleteFile, keyFromPublicUrl } from "@/lib/s3";
+import { saveProductImage, deleteProductImage } from "@/lib/local-images";
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
@@ -21,9 +21,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Файл слишком большой (максимум 5 МБ)." }, { status: 400 });
   }
 
-  const key = generateObjectKey(file.name);
   const buffer = Buffer.from(await file.arrayBuffer());
-  const url = await uploadFile(key, buffer, file.type);
+  const url = await saveProductImage(buffer, file.name);
 
   return NextResponse.json({ url });
 }
@@ -35,9 +34,6 @@ export async function DELETE(request: Request) {
   const url = new URL(request.url).searchParams.get("url");
   if (!url) return NextResponse.json({ error: "Missing url" }, { status: 400 });
 
-  const key = keyFromPublicUrl(url);
-  if (!key) return NextResponse.json({ error: "Unknown file" }, { status: 400 });
-
-  await deleteFile(key);
+  await deleteProductImage(url);
   return NextResponse.json({ ok: true });
 }
