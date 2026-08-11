@@ -8,18 +8,50 @@ import sharp from "sharp";
 // прозрачности), с дисковым кэшем, чтобы не пережимать при каждом опросе VK.
 export const dynamic = "force-dynamic";
 
-// Разрешаем проксировать только фото из нашего бакета — иначе это был бы
-// открытый прокси (SSRF).
-const ALLOWED_PREFIX =
-  "https://hfiaquyffhnkmqybooyu.supabase.co/storage/v1/object/public/product-images/";
+// Фото товаров теперь хранятся на самом сервере (/var/www/product-images,
+// раздаётся nginx по /product-images/). Локальные адреса читаем прямо с диска.
+const LOCAL_DIR = "/var/www/product-images";
+const LOCAL_PREFIXES = [
+  "https://xn---74-5cdfx1a1d1b.xn--p1ai/product-images/",
+  "https://айхерб-74.рф/product-images/",
+];
+
+// Разрешаем конвертировать только наши фото — иначе это открытый прокси (SSRF).
+// Старые внешние хосты оставлены на случай ещё не перенесённых ссылок.
+const ALLOWED_PREFIXES = [
+  ...LOCAL_PREFIXES,
+  "https://hfiaquyffhnkmqybooyu.supabase.co/storage/v1/object/public/product-images/",
+  "https://s3.twcstorage.ru/",
+];
 
 // Кэш вне каталога приложения, чтобы деплой (rsync --delete) его не сносил.
 const CACHE_DIR = "/var/tmp/vk-img-cache";
 const MIN_SIDE = 400; // требование VK — минимум 400×400
 
+// Загружает исходник: локальные фото — с диска, внешние — по сети.
+async function loadSource(src: string): Promise<Buffer | null> {
+  for (const pre of LOCAL_PREFIXES) {
+    if (src.startsWith(pre)) {
+      const name = path.basename(decodeURIComponent(src.slice(pre.length).split("?")[0]));
+      try {
+        return await fs.readFile(path.join(LOCAL_DIR, name));
+      } catch {
+        return null;
+      }
+    }
+  }
+  try {
+    const res = await fetch(src);
+    if (!res.ok) return null;
+    return Buffer.from(await res.arrayBuffer());
+  } catch {
+    return null;
+  }
+}
+
 export async function GET(request: Request) {
   const src = new URL(request.url).searchParams.get("src");
-  if (!src || !src.startsWith(ALLOWED_PREFIX)) {
+  if (!src || !ALLOWED_PREFIXES.some((pre) => src.startsWith(pre))) {
     return new Response("bad src", { status: 400 });
   }
 
@@ -34,15 +66,8 @@ export async function GET(request: Request) {
     // промах кэша — конвертируем ниже
   }
 
-  let upstream: Response;
-  try {
-    upstream = await fetch(src);
-  } catch {
-    return new Response("fetch failed", { status: 502 });
-  }
-  if (!upstream.ok) return new Response("upstream error", { status: 502 });
-
-  const input = Buffer.from(await upstream.arrayBuffer());
+  const input = await loadSource(src);
+  if (!input) return new Response("source unavailable", { status: 502 });
   let img = sharp(input).flatten({ background: "#ffffff" });
   const meta = await sharp(input).metadata();
   if ((meta.width ?? 0) < MIN_SIDE || (meta.height ?? 0) < MIN_SIDE) {
