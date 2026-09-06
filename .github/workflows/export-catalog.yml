@@ -1,0 +1,28 @@
+name: Export Catalog CSV
+
+on:
+  workflow_dispatch:
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts
+          install -m 600 -D /dev/null ~/.ssh/deploy_key
+          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/deploy_key
+
+      - name: Dump products to CSV
+        run: |
+          ssh -i ~/.ssh/deploy_key "${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}" \
+            "sudo -n -u postgres psql -d iherb -q -c \"COPY (SELECT name, brand, price, old_price, volume, form, in_stock, stock_quantity, is_hit, rating, array_to_string(purposes,'; ') AS purposes, array_to_string(active_components,'; ') AS active_components, image_url, array_to_string(image_urls,' | ') AS image_urls, slug, description FROM products ORDER BY brand, name) TO STDOUT WITH CSV HEADER\"" > catalog.csv
+          echo "--- rows (incl header) ---"
+          wc -l catalog.csv
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: catalog
+          path: catalog.csv
