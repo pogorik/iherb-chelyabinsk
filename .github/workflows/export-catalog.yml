@@ -7,16 +7,27 @@ jobs:
   export:
     runs-on: ubuntu-latest
     steps:
-      - name: Fetch all products from Supabase
+      - name: Diagnose Supabase reachability
         run: |
-          curl -s "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/rest/v1/products?select=*&order=brand,name&limit=2000" \
-            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
-            -o products.json
-          echo "--- bytes ---"; wc -c products.json
-          echo "--- count ---"; python3 -c "import json;print(len(json.load(open('products.json'))))"
+          echo "secret URL length: ${#SUPA_URL}"
+          echo "secret KEY length: ${#SUPA_KEY}"
+          echo "--- try secret host ---"
+          curl -s -o /dev/null -w "http_code=%{http_code} exit ok\n" --max-time 20 \
+            "$SUPA_URL/rest/v1/products?select=id&limit=1" -H "apikey: $SUPA_KEY" || echo "curl exit=$?"
+          echo "--- try known host directly ---"
+          curl -s -o r.json -w "http_code=%{http_code}\n" --max-time 20 \
+            "https://hfiaquyffhnkmqybooyu.supabase.co/rest/v1/products?select=*&order=brand,name&limit=2000" \
+            -H "apikey: $SUPA_KEY" || echo "curl exit=$?"
+          echo "--- bytes/count if any ---"
+          [ -f r.json ] && wc -c r.json && python3 -c "import json;d=json.load(open('r.json'));print('rows=',len(d) if isinstance(d,list) else d)" || echo "no file"
+        env:
+          SUPA_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPA_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
       - name: Upload artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: products
-          path: products.json
+          path: r.json
+          if-no-files-found: ignore
